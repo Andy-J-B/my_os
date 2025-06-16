@@ -13,8 +13,41 @@ bits 16
 start:
     jmp main
 
-;
-; Prings a string to the screen.
+; getchar
+; Gets input from keyboard
+; Params :
+;   - ds:di points to where to store input
+getchar:
+    ; save registers we will modify
+    push ax
+
+.getchar_loop:
+    ; Call get input from keyboard
+    mov ah, 0x00 
+    int 0x16
+
+    ; Check if enter
+    cmp al, 0x0d
+    je .getchar_done
+
+    ; Add to buffer
+    mov [di], al
+
+    ; increase by 1
+    inc di
+
+    jmp .getchar_loop
+
+.getchar_done:
+    ; Put end of string null terminator
+    mov byte [di], 0
+    
+    pop ax
+
+    ret
+    
+; puts
+; Prints a string to the screen.
 ; Params : 
 ;   - ds:si points to string
 puts:
@@ -22,7 +55,7 @@ puts:
     push si
     push ax
 
-.loop:
+.puts_loop:
     ; LODSB, LODSW, LODSD
     ; instructions that load a Byte/Word/Double-word from DS:SI into AL/AX/EAX, then increments SI by number of bytes loaded
     lodsb 
@@ -35,15 +68,15 @@ puts:
 
     ; JZ dest
     ; Jumps to dest if zero flag is set
-    jz .done
+    jz .puts_done
 
     mov ah, 0x0e
     int 0x10
 
 
-    jmp .loop
+    jmp .puts_loop
 
-.done:
+.puts_done:
     pop ax
     pop si
     ret
@@ -62,9 +95,20 @@ main:
     ; print message
     mov si, msg_hello
 
+    mov ds, ax
+
     ; Call the function
     call puts
 
+    ; set si
+    mov di, buffer
+
+    ; Call getchar
+    call getchar
+
+    ; print what we got as input
+    mov si, buffer
+    call puts
 
     ; For now, we only want to know if bios loads correctly
     ; HLT stops cpu from executing
@@ -74,8 +118,10 @@ main:
     jmp .halt
 
 ; text to print
-msg_hello: db "Hello World!", ENDL, 0
+msg_hello: db "Hello World. Welcome to Andy's Operating System!", ENDL, 0
 
+; Make a buffer
+buffer: times 16 db 0
 times 510-($-$$) db 0
 ; critical in bootloader development. It's NASM syntax used to pad your boot sector to the required 512 bytes.
 ; $-$$ gives the size of our program so far in bytes
