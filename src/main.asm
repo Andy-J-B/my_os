@@ -20,6 +20,8 @@ start:
 getchar:
     ; save registers we will modify
     push ax
+    push ds
+    pop es
 
 .getchar_loop:
     ; Call get input from keyboard
@@ -31,20 +33,18 @@ getchar:
     je .getchar_done
 
     ; Add to buffer
-    mov [di], al
-
-    ; increase by 1
-    inc di
+    stosb
 
     jmp .getchar_loop
 
 .getchar_done:
     ; Put end of string null terminator
     mov byte [di], 0
-    
+    push es
+    pop ds
     pop ax
-
     ret
+
     
 ; puts
 ; Prints a string to the screen.
@@ -100,7 +100,12 @@ main:
     ; Call the function
     call puts
 
-    ; set si
+    ; print intro
+    mov si, msg_intro
+    mov ds, ax
+    call puts
+
+    ; set di
     mov di, buffer
 
     ; Call getchar
@@ -119,6 +124,12 @@ main:
 
 ; text to print
 msg_hello: db "Hello World. Welcome to Andy's Operating System!", ENDL, 0
+
+msg_intro: db "AndyOS v0.1 - A Simple Operating System by Andy", 0x0D, 0x0A
+           db "----------------------------------------------", 0x0D, 0x0A
+           db "Boot successful. Initializing kernel services...", 0x0D, 0x0A
+           db "Type 'help' to get started.", 0x0D, 0x0A, 0
+
 
 ; Make a buffer
 buffer: times 16 db 0
